@@ -1,0 +1,10 @@
+{
+  "name": "raya",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "test": "npm run test -w @raya/engine",
+    "dev": "npm run dev -w @raya/web",
+    "build": "npm run build -w @raya/web"
+  }
+}
