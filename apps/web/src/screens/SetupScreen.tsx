@@ -8,9 +8,10 @@ import { load, save } from '../storage';
 interface Props {
   onBack: () => void;
   onReady: (s: Setup) => void;
+  subtitle?: string;
 }
 
-export function SetupScreen({ onBack, onReady }: Props) {
+export function SetupScreen({ onBack, onReady, subtitle }: Props) {
   const [setup, setSetup] = useState<Setup>(() => {
     const saved = load<Setup | null>('raya.lastSetup', null);
     return saved && !validateSetup(saved) ? saved : randomSetup();
@@ -42,7 +43,7 @@ export function SetupScreen({ onBack, onReady }: Props) {
     <main className="screen">
       <div className="setup-head">
         <div>
-          <h2>رتّب جيشك</h2>
+          <h2>رتّب جيشك{subtitle ? <span className="muted" style={{ fontSize: 14, fontWeight: 400 }}> · {subtitle}</span> : null}</h2>
           <span className="muted" style={{ fontSize: 13 }}>
             {pickedName ? `اخترت ${pickedName}. اضغط قطعة ثانية للتبديل` : 'اضغط قطعتين عشان تبدّل مكانهم'}
           </span>

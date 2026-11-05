@@ -293,3 +293,22 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-
 @media (prefers-reduced-motion: reduce) {
   .tok, .btn { transition: none; }
 }
+
+/* ---------- online ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.field input, .code-input {
+  min-height: 52px; border-radius: var(--r-btn); border: 1px solid var(--surface-line); background: var(--surface);
+  box-shadow: var(--surface-shadow); color: var(--ink); font: inherit; font-size: 17px; padding: 0 14px;
+}
+.code-input { flex-grow: 1; min-width: 0; letter-spacing: 0.3em; text-transform: uppercase; text-align: center; font-weight: 700; }
+.field input:focus, .code-input:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+.waiting { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 28px 20px; text-align: center; }
+.room-code { font-family: var(--font-display); font-size: 48px; letter-spacing: 0.15em; color: var(--title); line-height: 1; }
+.spinner {
+  width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--surface-line); border-top-color: var(--gold);
+  animation: spin 0.9s linear infinite;
+}
+[data-skin='clay'] .spinner { border-color: var(--hint); border-top-color: var(--me); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error { color: var(--danger); margin: 0; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }

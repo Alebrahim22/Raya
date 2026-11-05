@@ -9,10 +9,12 @@ interface Props {
   level: BotLevel;
   onLevel: (l: BotLevel) => void;
   onPlayBot: () => void;
+  onFriend: () => void;
+  onQuick: () => void;
   onRules: () => void;
 }
 
-export function Home({ skin, onSkin, level, onLevel, onPlayBot, onRules }: Props) {
+export function Home({ skin, onSkin, level, onLevel, onPlayBot, onFriend, onQuick, onRules }: Props) {
   return (
     <main className="screen">
       <div className="hero">
@@ -34,11 +36,11 @@ export function Home({ skin, onSkin, level, onLevel, onPlayBot, onRules }: Props
       </div>
 
       <div className="grid2">
-        <button type="button" className="btn mode-tile" disabled title="قريباً">
-          <Icon d={ICONS.friends} size={28} /> مع ربعي (قريباً)
+        <button type="button" className="btn mode-tile" onClick={onFriend}>
+          <Icon d={ICONS.friends} size={28} /> مع ربعي
         </button>
-        <button type="button" className="btn mode-tile" disabled title="قريباً">
-          <Icon d={ICONS.bolt} size={28} /> لعب سريع (قريباً)
+        <button type="button" className="btn mode-tile" onClick={onQuick}>
+          <Icon d={ICONS.bolt} size={28} /> لعب سريع
         </button>
       </div>
 

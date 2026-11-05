@@ -16,7 +16,7 @@ interface Props {
 const HUMAN = 0 as const;
 const BOT = 1 as const;
 
-function remaining(view: ReturnType<typeof viewFor>, owner: 0 | 1): Map<Rank, number> {
+export function remaining(view: ReturnType<typeof viewFor>, owner: 0 | 1): Map<Rank, number> {
   const left = new Map<Rank, number>(ARMY.map(([r, n]) => [r, n] as [Rank, number]));
   for (const e of view.history) {
     if (!e.battle) continue;
@@ -84,19 +84,9 @@ export function GameScreen({ setup, level, onExit, onRematch }: Props) {
 
       <Board board={view.board} me={HUMAN} selected={selected} hints={hints} last={last} onCell={tap} />
 
-      <ClashCard event={clash} />
+      <ClashCard event={clash} me={HUMAN} />
 
-      <div className="card tray" aria-label="المتبقي عند الخصم">
-        {ARMY.map(([rank]) => {
-          const n = enemyLeft.get(rank) ?? 0;
-          const p: PublicPiece = { id: String(rank), owner: BOT, rank, revealed: true };
-          return (
-            <div key={String(rank)} className={`item ${n ? '' : 'gone'}`} title={PIECE_NAME[String(rank)]}>
-              <Token piece={p} me={HUMAN} /><b>{n}</b>
-            </div>
-          );
-        })}
-      </div>
+      <EnemyTray left={enemyLeft} me={HUMAN} />
 
       <div className={`card bar me row ${state.turn === HUMAN && !over ? 'active' : ''}`} style={{ marginTop: 'auto' }}>
         <div className="avatar">أنا</div>
@@ -143,23 +133,40 @@ export function GameScreen({ setup, level, onExit, onRematch }: Props) {
   );
 }
 
-function ClashCard({ event }: { event: MoveEvent | null }) {
+export function EnemyTray({ left, me }: { left: Map<Rank, number>; me: 0 | 1 }) {
+  const enemy = (1 - me) as 0 | 1;
+  return (
+    <div className="card tray" aria-label="المتبقي عند الخصم">
+      {ARMY.map(([rank]) => {
+        const n = left.get(rank) ?? 0;
+        const p: PublicPiece = { id: String(rank), owner: enemy, rank, revealed: true };
+        return (
+          <div key={String(rank)} className={`item ${n ? '' : 'gone'}`} title={PIECE_NAME[String(rank)]}>
+            <Token piece={p} me={me} /><b>{n}</b>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ClashCard({ event, me }: { event: MoveEvent | null; me: 0 | 1 }) {
   if (!event?.battle) {
     return <div className="card clash row muted" style={{ justifyContent: 'center', fontSize: 13 }}>اضغط قطعة من قطعك، بعدين اضغط وين تبيها تروح</div>;
   }
   const { attacker, defender, outcome } = event.battle;
-  const mineAttacked = event.player === HUMAN;
+  const mineAttacked = event.player === me;
   const a: PublicPiece = { id: 'a', owner: event.player, rank: attacker, revealed: true };
   const d: PublicPiece = { id: 'd', owner: (1 - event.player) as 0 | 1, rank: defender, revealed: true };
   const iWon = outcome === 'both' ? null : (outcome === 'attacker') === mineAttacked;
   return (
     <div className="card clash row" aria-live="polite">
       <div className={`side ${outcome === 'defender' || outcome === 'both' ? 'lost' : ''}`}>
-        <Token piece={a} me={HUMAN} /><span>{PIECE_NAME[String(attacker)]} {typeof attacker === 'number' ? attacker : ''}</span>
+        <Token piece={a} me={me} /><span>{PIECE_NAME[String(attacker)]} {typeof attacker === 'number' ? attacker : ''}</span>
       </div>
       <span className="vs">ضد</span>
       <div className={`side ${outcome === 'attacker' || outcome === 'both' ? 'lost' : ''}`}>
-        <Token piece={d} me={HUMAN} /><span>{PIECE_NAME[String(defender)]} {typeof defender === 'number' ? defender : ''}</span>
+        <Token piece={d} me={me} /><span>{PIECE_NAME[String(defender)]} {typeof defender === 'number' ? defender : ''}</span>
       </div>
       <span className="verdict">{iWon === null ? 'تعادل' : iWon ? 'فزت' : 'خسرت'}</span>
     </div>
