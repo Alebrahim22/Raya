@@ -25,6 +25,12 @@
   --known-edge: #5F0A24;
   --known-ring: #FFE08A;
   --foe: #9BEBFF;
+  --fx-hot: #FFD27A;
+  --fx-ring: #E9C877;
+  --fx-shard: #F06A3F;
+  --fx-badge: linear-gradient(180deg, #F6DC93, #D4A853);
+  --fx-badge-ink: #1A1426;
+  --fx-badge-edge: #8A6A2C;
   --foe-line: rgba(155, 235, 255, 0.65);
   --foe-soft: rgba(155, 235, 255, 0.12);
   --tile-a: #2A2550;
@@ -81,6 +87,12 @@
   --known-edge: #9F1239;
   --known-ring: #FFFFFF;
   --foe: #8B5CF6;
+  --fx-hot: #FFC24D;
+  --fx-ring: #FF8A1F;
+  --fx-shard: #FFD23F;
+  --fx-badge: #22C55E;
+  --fx-badge-ink: #FFFFFF;
+  --fx-badge-edge: #15803D;
   --foe-line: rgba(139, 92, 246, 0.6);
   --foe-soft: rgba(139, 92, 246, 0.12);
   --tile-a: #F6F9FE;
@@ -465,6 +477,76 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-
 
 .tok.selected { transform: translateY(-5px); box-shadow: 0 0 0 2px var(--gold), 0 10px 18px rgba(0, 0, 0, 0.4); }
 .tok.target { box-shadow: 0 0 0 2px #fff, 0 0 16px rgba(255, 120, 80, 0.9); }
+
+/* ---------- clash effect (my attacks) ---------- */
+.fx {
+  position: absolute; width: calc((100% - 16px) / 10 - 3px); aspect-ratio: 1 / 1; transform: translate(-50%, -50%);
+  z-index: 3; pointer-events: none;
+}
+.fx > span { position: absolute; }
+.fx-ghost { inset: 2px; animation: fx-crack 0.34s ease-in forwards; }
+.fx-ghost .tok { width: 100%; height: 100%; }
+@keyframes fx-crack {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-8%) rotate(-6deg); }
+  40% { transform: translateX(8%) rotate(5deg); }
+  60% { transform: translateX(-5%) rotate(-3deg) scale(1.05); }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+.fx-flash {
+  inset: -45%; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, #fff 0%, var(--fx-hot) 30%, transparent 68%);
+  animation: fx-flash 0.42s ease-out 0.26s forwards;
+}
+@keyframes fx-flash { 0% { opacity: 0; transform: scale(0.3); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.5); } }
+.fx-wave {
+  inset: 0; border-radius: 50%; border: 3px solid var(--fx-ring); opacity: 0;
+  animation: fx-wave 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 0.26s forwards;
+}
+@keyframes fx-wave { 0% { opacity: 1; transform: scale(0.3); border-width: 4px; } 100% { opacity: 0; transform: scale(2.8); border-width: 1px; } }
+.fx-shard {
+  left: 50%; top: 50%; width: 32%; height: 32%; margin: -16% 0 0 -16%; opacity: 0;
+  background: var(--en-soft); clip-path: polygon(50% 0, 100% 70%, 20% 100%);
+  animation: fx-shard 0.75s cubic-bezier(0.15, 0.7, 0.3, 1) 0.28s forwards;
+}
+.fx-shard:nth-child(2n) { background: var(--fx-shard); }
+.fx-shard.spark { width: 12%; height: 12%; margin: -6% 0 0 -6%; border-radius: 50%; clip-path: none; background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+@keyframes fx-shard {
+  0% { opacity: 1; transform: rotate(var(--a)) translateY(0) rotate(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--d))) rotate(var(--r)) scale(0.5); }
+}
+.fx-badge {
+  left: 50%; bottom: 112%; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  padding: 4px 10px; border-radius: 999px; font-family: var(--font-display); font-weight: 800; font-size: 14px;
+  background: var(--fx-badge); color: var(--fx-badge-ink); box-shadow: 0 4px 0 var(--fx-badge-edge), 0 8px 18px rgba(0, 0, 0, 0.35);
+  opacity: 0; transform: translateX(-50%) scale(0.4); animation: fx-badge 1.6s ease-out 0.3s forwards;
+}
+.fx-low .fx-badge { bottom: auto; top: 112%; }
+@keyframes fx-badge {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.4); }
+  14% { opacity: 1; transform: translateX(-50%) scale(1.18); }
+  24% { transform: translateX(-50%) scale(1); }
+  78% { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+}
+.fx-draw .fx-shard { background: var(--muted); }
+.fx-draw .fx-shard.spark { background: var(--muted); box-shadow: none; }
+.fx-draw .fx-badge, .fx-lose .fx-badge { background: var(--surface); color: var(--muted); box-shadow: 0 0 0 1px var(--surface-line), 0 6px 14px rgba(0, 0, 0, 0.25); font-size: 13px; }
+.fx-draw .fx-flash, .fx-lose .fx-flash { background: radial-gradient(circle, rgba(255, 255, 255, 0.6), transparent 65%); }
+.fx-draw .fx-wave, .fx-lose .fx-wave { border-color: var(--muted); }
+.tok.win-hop { animation: win-hop 0.6s cubic-bezier(0.3, 0, 0.3, 1) 0.32s both; }
+@keyframes win-hop {
+  0% { transform: translateY(0) scale(1); }
+  20% { transform: translateY(0) scale(1.12, 0.86); }
+  50% { transform: translateY(-32%) scale(0.95, 1.08); }
+  80% { transform: translateY(0) scale(1.08, 0.92); }
+  100% { transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-ghost, .fx-shard, .fx-wave, .fx-flash { display: none; }
+  .tok.win-hop { animation: none; }
+}
 
 /* ---------- battle + tray ---------- */
 .clash { padding: 10px 14px; min-height: 76px; }

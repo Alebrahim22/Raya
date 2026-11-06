@@ -175,7 +175,7 @@ function OnlineGame({ net, onExit }: { net: ReturnType<typeof useOnline>; onExit
         <ArmyStrip view={view} owner={opp} me={seat} />
       </div>
 
-      <Board board={view.board} me={seat} selected={selected} hints={hints} last={view.history.at(-1)?.move ?? null} lastBy={view.history.at(-1)?.player} seq={view.history.length} onCell={tap} />
+      <Board board={view.board} me={seat} selected={selected} hints={hints} last={view.history.at(-1)?.move ?? null} lastBy={view.history.at(-1)?.player} seq={view.history.length} battle={view.history.at(-1)?.battle} onCell={tap} />
       <ClashCard event={net.event} me={seat} />
 
       <div className={`card bar me ${myTurn ? 'active' : ''}`} style={{ marginTop: 'auto' }}>

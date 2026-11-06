@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { SIZE, isLake } from '@raya/engine';
-import type { Move, Pos, PublicPiece } from '@raya/engine';
-import { Emblem, PIECE_NAME } from './pieces';
+import type { Move, MoveEvent, Pos, PublicPiece } from '@raya/engine';
+import { Emblem, ICONS, Icon, PIECE_NAME } from './pieces';
 
 interface Props {
   board: (PublicPiece | null)[][];
@@ -12,6 +14,8 @@ interface Props {
   lastBy?: 0 | 1;
   /** increases every move so the arrow animation replays */
   seq?: number;
+  /** battle result of `last`, for the clash effect */
+  battle?: MoveEvent['battle'];
   dimRows?: (r: number) => boolean;
   onCell?: (p: Pos) => void;
 }
@@ -30,12 +34,24 @@ export function Token({ piece, me, className = '' }: { piece: PublicPiece; me: 0
   );
 }
 
-export function Board({ board, me, selected, hints = [], last, lastBy, seq = 0, dimRows, onCell }: Props) {
+export function Board({ board, me, selected, hints = [], last, lastBy, seq = 0, battle, dimRows, onCell }: Props) {
   const rows = me === 0 ? [...Array(SIZE).keys()] : [...Array(SIZE).keys()].reverse();
   const cols = me === 0 ? [...Array(SIZE).keys()] : [...Array(SIZE).keys()].reverse();
   const foe = !!last && lastBy !== undefined && lastBy !== me;
   // display position (0..9) of a board square after flipping for seat 1
   const disp = (p: Pos) => ({ x: (me === 0 ? p.c : SIZE - 1 - p.c) + 0.5, y: (me === 0 ? p.r : SIZE - 1 - p.r) + 0.5 });
+  // my attack: celebrate a win, soften a draw or a loss
+  const myStrike = !!last && !!battle && lastBy === me;
+  const iWon = myStrike && battle!.outcome === 'attacker';
+  // keep the burst on screen for its full length even if the opponent answers quickly
+  const [fx, setFx] = useState<{ seq: number; at: { x: number; y: number }; battle: NonNullable<MoveEvent['battle']> } | null>(null);
+  useEffect(() => {
+    if (!myStrike) return;
+    setFx({ seq, at: disp(last!.to), battle: battle! });
+    const t = setTimeout(() => setFx((f) => (f && f.seq === seq ? null : f)), 2000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seq, myStrike]);
   const hintAt = (r: number, c: number) => hints.some((m) => m.to.r === r && m.to.c === c);
   return (
     <div className="board-wrap">
@@ -54,12 +70,14 @@ export function Board({ board, me, selected, hints = [], last, lastBy, seq = 0, 
               <button key={`${r}-${c}`} type="button" className={cls} aria-label={label} disabled={lake}
                 onClick={() => onCell?.({ r, c })}>
                 {p && <Token piece={p} me={me}
-                  className={`${eq(selected, r, c) ? 'selected' : ''} ${hint ? 'target' : ''} ${p.owner !== me && p.rank !== null ? 'known' : ''}`} />}
+                  className={`${eq(selected, r, c) ? 'selected' : ''} ${hint ? 'target' : ''} ${p.owner !== me && p.rank !== null ? 'known' : ''} ${iWon && eq(last!.to, r, c) ? 'win-hop' : ''}`}
+                  key={iWon && eq(last!.to, r, c) ? `hop-${seq}` : p.id} />}
               </button>
             );
           }),
         )}
         {foe && <FoeArrow key={seq} from={disp(last!.from)} to={disp(last!.to)} />}
+        {fx && <ClashFx key={`fx-${fx.seq}`} at={fx.at} battle={fx.battle} me={me} />}
       </div>
     </div>
   );
@@ -169,5 +187,29 @@ function Lakes() {
         ))}
       </g>
     </svg>
+  );
+}
+
+const SHARDS = 12;
+
+/** Burst where my attack landed: the enemy piece cracks into shards with a shockwave, and a victory badge pops. */
+function ClashFx({ at, battle, me }: { at: { x: number; y: number }; battle: NonNullable<MoveEvent['battle']>; me: 0 | 1 }) {
+  const enemy = (1 - me) as 0 | 1;
+  const kind = battle.outcome === 'attacker' ? 'win' : battle.outcome === 'both' ? 'draw' : 'lose';
+  const ghost: PublicPiece = { id: 'ghost', owner: enemy, rank: battle.defender, revealed: true };
+  const label = kind === 'win' ? 'ضربة!' : kind === 'draw' ? 'تعادل' : 'صدّها';
+  return (
+    <div className={`fx fx-${kind} ${at.y < 2 ? 'fx-low' : ''}`} style={{ left: `calc(8px + (100% - 16px) * ${at.x / 10})`, top: `calc(8px + (100% - 16px) * ${at.y / 10})` }} aria-hidden="true">
+      {kind !== 'lose' && <span className="fx-ghost"><Token piece={ghost} me={me} /></span>}
+      <span className="fx-flash" />
+      <span className="fx-wave" />
+      {kind !== 'lose' && Array.from({ length: SHARDS }, (_, i) => {
+        const angle = (360 / SHARDS) * i + (i % 2 ? 9 : -6);
+        const dist = (kind === 'win' ? 46 : 26) + (i % 3) * 14;
+        return <span key={i} className={`fx-shard ${i % 3 === 0 ? 'spark' : ''}`}
+          style={{ '--a': `${angle}deg`, '--d': `${dist}px`, '--r': `${(i * 67) % 360}deg` } as CSSProperties} />;
+      })}
+      <span className="fx-badge">{kind === 'win' && <Icon d={ICONS.swords} size={14} />}{label}</span>
+    </div>
   );
 }

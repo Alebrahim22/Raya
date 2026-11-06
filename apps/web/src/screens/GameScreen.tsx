@@ -52,7 +52,7 @@ export function GameScreen({ setup, level, rules, onExit, onRematch }: Props) {
       const res = applyMove(state, m);
       if (res.event.battle) setClash(res.event);
       setState(res.state);
-    }, 650);
+    }, state.history.at(-1)?.battle ? 1500 : 650); // let the clash effect play before the bot answers
     return () => clearTimeout(t);
   }, [state, level, over]);
 
@@ -85,7 +85,7 @@ export function GameScreen({ setup, level, rules, onExit, onRematch }: Props) {
         <ArmyStrip view={view} owner={BOT} me={HUMAN} />
       </div>
 
-      <Board board={view.board} me={HUMAN} selected={selected} hints={hints} last={last} lastBy={view.history.at(-1)?.player} seq={view.history.length} onCell={tap} />
+      <Board board={view.board} me={HUMAN} selected={selected} hints={hints} last={last} lastBy={view.history.at(-1)?.player} seq={view.history.length} battle={view.history.at(-1)?.battle} onCell={tap} />
 
       <ClashCard event={clash} me={HUMAN} />
 
