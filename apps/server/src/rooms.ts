@@ -2,7 +2,7 @@ import { randomBytes, randomInt } from 'node:crypto';
 import {
   applyMove, createGame, isLegal, legalMoves, resign, validateSetup, viewFor,
 } from '@raya/engine';
-import type { GameState, MoveEvent, Setup } from '@raya/engine';
+import type { GameRules, GameState, MoveEvent, Setup } from '@raya/engine';
 import type { ClientMsg, Phase, RoomInfo, Seat, ServerMsg } from '@raya/engine';
 
 /** Anything that can receive messages: a WebSocket in production, a stub in tests. */
@@ -26,6 +26,7 @@ export interface Room {
   lastEvent: MoveEvent | null;
   touched: number;
   firstSeat: Seat;
+  rules: GameRules;
 }
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid misreading
@@ -40,7 +41,7 @@ export class Lobby {
 
   handle(conn: Conn, msg: ClientMsg): void {
     switch (msg.t) {
-      case 'create': this.create(conn, msg.name); return;
+      case 'create': this.create(conn, msg.name, cleanRules(msg.rules)); return;
       case 'join': return this.join(conn, msg.code, msg.name);
       case 'quick': return this.quick(conn, msg.name);
       case 'cancelQuick': if (this.queue?.conn === conn) this.queue = null; return;
@@ -91,10 +92,10 @@ export class Lobby {
     conn.send({ t: 'joined', code: room.code, token, seat });
   }
 
-  private create(conn: Conn, name: string): Room {
+  private create(conn: Conn, name: string, rules: GameRules = {}): Room {
     const room: Room = {
       code: this.newCode(), seats: [null, null], phase: 'waiting', game: null, lastEvent: null,
-      touched: this.now(), firstSeat: randomInt(2) as Seat,
+      touched: this.now(), firstSeat: randomInt(2) as Seat, rules,
     };
     this.rooms.set(room.code, room);
     this.seatFor(room, 0, conn, name);
@@ -185,7 +186,7 @@ export class Lobby {
     room.seats[seat]!.setup = setup;
     const [a, b] = room.seats;
     if (a?.setup && b?.setup) {
-      room.game = createGame(a.setup, b.setup, room.firstSeat);
+      room.game = createGame(a.setup, b.setup, room.firstSeat, room.rules);
       room.lastEvent = null;
       room.phase = 'playing';
       this.broadcastRoom(room);
@@ -246,6 +247,7 @@ export class Lobby {
       ready: [!!s[0]?.setup, !!s[1]?.setup],
       connected: [!!s[0]?.conn, !!s[1]?.conn],
       rematch: [!!s[0]?.rematch, !!s[1]?.rematch],
+      rules: room.rules,
     };
   }
 
@@ -270,4 +272,10 @@ export class Lobby {
 function clean(name: unknown): string {
   const s = String(name ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 20);
   return s || 'لاعب';
+}
+
+/** Keep only known house-rule flags from an untrusted client message. */
+function cleanRules(raw: unknown): GameRules {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return r.diagonal4 === true ? { diagonal4: true } : {};
 }

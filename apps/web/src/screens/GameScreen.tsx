@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ARMY, applyMove, chooseBotMove, createGame, legalMoves, legalMovesFrom, randomSetup, resign, viewFor,
 } from '@raya/engine';
-import type { BotLevel, GameState, MoveEvent, Pos, PublicPiece, Rank, Setup } from '@raya/engine';
+import type { BotLevel, GameRules, GameState, MoveEvent, Pos, PublicPiece, Rank, Setup } from '@raya/engine';
 import { Board, Token } from '../Board';
 import { PIECE_NAME } from '../pieces';
 
 interface Props {
   setup: Setup;
   level: BotLevel;
+  rules: GameRules;
   onExit: () => void;
   onRematch: () => void;
 }
@@ -32,8 +33,8 @@ function piecesLeft(state: GameState, owner: 0 | 1) {
   return state.board.flat().filter((p) => p && p.owner === owner).length;
 }
 
-export function GameScreen({ setup, level, onExit, onRematch }: Props) {
-  const [state, setState] = useState<GameState>(() => createGame(setup, randomSetup()));
+export function GameScreen({ setup, level, rules, onExit, onRematch }: Props) {
+  const [state, setState] = useState<GameState>(() => createGame(setup, randomSetup(), 0, rules));
   const [selected, setSelected] = useState<Pos | null>(null);
   const [clash, setClash] = useState<MoveEvent | null>(null);
   const [confirmResign, setConfirmResign] = useState(false);
@@ -75,25 +76,30 @@ export function GameScreen({ setup, level, onExit, onRematch }: Props) {
 
   return (
     <main className="screen">
-      <div className={`card bar enemy row ${state.turn === BOT && !over ? 'active' : ''}`}>
-        <div className="avatar">ب</div>
-        <div className="who"><b>البوت · {level === 'easy' ? 'سهل' : 'متوسط'}</b><span>{piecesLeft(state, BOT)} قطعة باقية</span></div>
-        {state.turn === BOT && !over && <span className="muted" style={{ fontSize: 13 }}>يفكّر…</span>}
+      <div className={`card bar enemy ${state.turn === BOT && !over ? 'active' : ''}`}>
+        <div className="row">
+          <div className="avatar">ب</div>
+          <div className="who"><b>البوت · {level === 'easy' ? 'سهل' : 'متوسط'}</b><span>{piecesLeft(state, BOT)} قطعة باقية</span></div>
+          {state.turn === BOT && !over && <span className="muted" style={{ fontSize: 13 }}>يفكّر…</span>}
+        </div>
+        <ArmyStrip view={view} owner={BOT} me={HUMAN} />
       </div>
 
       <Board board={view.board} me={HUMAN} selected={selected} hints={hints} last={last} lastBy={view.history.at(-1)?.player} seq={view.history.length} onCell={tap} />
 
       <ClashCard event={clash} me={HUMAN} />
 
-      <ArmyTray view={view} me={HUMAN} />
 
-      <div className={`card bar me row ${state.turn === HUMAN && !over ? 'active' : ''}`} style={{ marginTop: 'auto' }}>
-        <div className="avatar">أنا</div>
-        <div className="who">
-          <b>{over ? 'انتهت المباراة' : state.turn === HUMAN ? 'دورك' : 'دور الخصم'}</b>
-          <span>{selected ? `اخترت ${PIECE_NAME[String(state.board[selected.r][selected.c]?.rank)]}` : `${piecesLeft(state, HUMAN)} قطعة باقية`}</span>
+      <div className={`card bar me ${state.turn === HUMAN && !over ? 'active' : ''}`} style={{ marginTop: 'auto' }}>
+        <ArmyStrip view={view} owner={HUMAN} me={HUMAN} />
+        <div className="row">
+          <div className="avatar">أنا</div>
+          <div className="who">
+            <b>{over ? 'انتهت المباراة' : state.turn === HUMAN ? 'دورك' : 'دور الخصم'}</b>
+            <span>{selected ? `اخترت ${PIECE_NAME[String(state.board[selected.r][selected.c]?.rank)]}` : `${piecesLeft(state, HUMAN)} قطعة باقية`}</span>
+          </div>
+          {state.turn === HUMAN && !over && <span className="pill">حرّك</span>}
         </div>
-        {state.turn === HUMAN && !over && <span className="pill">حرّك</span>}
       </div>
       <div className="grid2">
         <button type="button" className="btn" onClick={onExit}>القائمة</button>
@@ -132,33 +138,20 @@ export function GameScreen({ setup, level, onExit, onRematch }: Props) {
   );
 }
 
-/** Remaining army for both sides: enemy row on top, mine below. */
-export function ArmyTray({ view, me }: { view: ReturnType<typeof viewFor>; me: 0 | 1 }) {
-  const enemy = (1 - me) as 0 | 1;
-  const row = (owner: 0 | 1, label: string) => {
-    const left = remaining(view, owner);
-    const total = [...left.values()].reduce((a, b) => a + b, 0);
-    return (
-      <div className={`tray-row ${owner === me ? 'mine' : 'theirs'}`} aria-label={`المتبقي ${label}`}>
-        <div className="tray-label"><b>{label}</b><span>{total}</span></div>
-        <div className="tray-items">
-          {ARMY.map(([rank]) => {
-            const n = left.get(rank) ?? 0;
-            const p: PublicPiece = { id: String(rank), owner, rank, revealed: true };
-            return (
-              <div key={String(rank)} className={`item ${n ? '' : 'gone'}`} title={`${PIECE_NAME[String(rank)]}: ${n}`}>
-                <Token piece={p} me={me} /><b className="count">{n}</b>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
+/** One side's remaining army, shown inside that player's bar. */
+export function ArmyStrip({ view, owner, me }: { view: ReturnType<typeof viewFor>; owner: 0 | 1; me: 0 | 1 }) {
+  const left = remaining(view, owner);
   return (
-    <div className="card tray">
-      {row(enemy, 'الخصم')}
-      {row(me, 'أنا')}
+    <div className="army" aria-label={owner === me ? 'قطعي المتبقية' : 'قطع الخصم المتبقية'}>
+      {ARMY.map(([rank]) => {
+        const n = left.get(rank) ?? 0;
+        const p: PublicPiece = { id: String(rank), owner, rank, revealed: true };
+        return (
+          <div key={String(rank)} className={`item ${n ? '' : 'gone'}`} title={`${PIECE_NAME[String(rank)]}: ${n}`}>
+            <Token piece={p} me={me} /><b className="count">{n}</b>
+          </div>
+        );
+      })}
     </div>
   );
 }

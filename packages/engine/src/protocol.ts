@@ -1,10 +1,10 @@
-import type { Move, MoveEvent, PlayerView, Pos, Setup } from './types';
+import type { GameRules, Move, MoveEvent, PlayerView, Pos, Setup } from './types';
 
 export type Seat = 0 | 1;
 export type Phase = 'waiting' | 'setup' | 'playing' | 'over';
 
 export type ClientMsg =
-  | { t: 'create'; name: string }
+  | { t: 'create'; name: string; rules?: GameRules }
   | { t: 'join'; code: string; name: string }
   | { t: 'quick'; name: string }
   | { t: 'cancelQuick' }
@@ -23,6 +23,8 @@ export interface RoomInfo {
   ready: [boolean, boolean];
   connected: [boolean, boolean];
   rematch: [boolean, boolean];
+  /** house rules the room's creator picked */
+  rules: GameRules;
 }
 
 export type ServerMsg =

@@ -69,66 +69,104 @@ function FoeArrow({ from, to }: { from: { x: number; y: number }; to: { x: numbe
   const dx = to.x - from.x, dy = to.y - from.y;
   const len = Math.hypot(dx, dy) || 1;
   const ux = dx / len, uy = dy / len;
-  // start just outside the origin dot, stop short of the target centre so the head sits on its edge
-  const x1 = from.x + ux * 0.18, y1 = from.y + uy * 0.18;
-  const x2 = to.x - ux * 0.3, y2 = to.y - uy * 0.3;
-  const hx = to.x - ux * 0.08, hy = to.y - uy * 0.08;
-  const px = -uy * 0.24, py = ux * 0.24;
-  const bx = to.x - ux * 0.42, by = to.y - uy * 0.42;
+  // a soft dotted trail from the origin ring to just before the target, then a small rounded chevron
+  const x1 = from.x + ux * 0.2, y1 = from.y + uy * 0.2;
+  const x2 = to.x - ux * 0.34, y2 = to.y - uy * 0.34;
+  const tipX = to.x - ux * 0.2, tipY = to.y - uy * 0.2;
+  const backX = tipX - ux * 0.16, backY = tipY - uy * 0.16;
+  const px = -uy * 0.13, py = ux * 0.13;
+  // big viewBox for the same reason as the lakes: crisp rendering on the tilted board
   return (
-    <svg className="foe-arrow" viewBox="0 0 10 10" aria-hidden="true">
-      <circle className="foe-dot" cx={from.x} cy={from.y} r={0.16} />
-      <line className="foe-line" x1={x1} y1={y1} x2={x2} y2={y2} pathLength={1} />
-      <polygon className="foe-head" points={`${hx},${hy} ${bx + px},${by + py} ${bx - px},${by - py}`} />
+    <svg className="foe-arrow" viewBox="0 0 1000 1000" aria-hidden="true">
+      <defs>
+        <mask id="foe-reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="10" height="10">
+          <line className="foe-mask" x1={x1} y1={y1} x2={x2} y2={y2} pathLength={1} strokeDashoffset={0}>
+            <animate attributeName="stroke-dashoffset" from="1" to="0" dur="0.55s" fill="freeze"
+              calcMode="spline" keyTimes="0;1" keySplines="0.3 0 0.2 1" />
+          </line>
+        </mask>
+      </defs>
+      <g transform="scale(100)" opacity="1">
+        {/* settle to a quieter state once the eye has caught it */}
+        <animate attributeName="opacity" from="1" to="0.7" begin="1.6s" dur="0.8s" fill="freeze" />
+        <circle className="foe-ring" cx={from.x} cy={from.y} r={0.13} />
+        <line className="foe-line" x1={x1} y1={y1} x2={x2} y2={y2} mask="url(#foe-reveal)" />
+        <path className="foe-head" opacity="0" d={`M${backX + px} ${backY + py} L${tipX} ${tipY} L${backX - px} ${backY - py}`}>
+          <animate attributeName="opacity" from="0" to="1" begin="0.45s" dur="0.25s" fill="freeze" />
+        </path>
+      </g>
     </svg>
   );
 }
 
-/* The two 2x2 lakes sit on the same display squares for both seats (cols 2-3 and 6-7, rows 4-5). */
-function Lakes() {
+const SHORE = 'M0.95 0.05 C1.5 0.02 1.97 0.3 1.95 0.9 C1.94 1.3 1.98 1.7 1.5 1.92 C1.1 2.0 0.5 1.97 0.22 1.75 C0.0 1.55 0.04 1.15 0.06 0.85 C0.08 0.35 0.45 0.07 0.95 0.05Z';
+
+function Sparkle({ x, y, s, delay }: { x: number; y: number; s: number; delay: number }) {
   return (
-    // Large viewBox + scale: Chrome rasterises an animated SVG on the tilted board at its viewBox size,
-    // so a 10x10 viewBox came out blurry.
+    <path className="sparkle" transform={`translate(${x} ${y}) scale(${s})`}
+      d="M0 -1 C0.12 -0.12 0.12 -0.12 1 0 C0.12 0.12 0.12 0.12 0 1 C-0.12 0.12 -0.12 0.12 -1 0 C-0.12 -0.12 -0.12 -0.12 0 -1Z">
+      <animate attributeName="opacity" values="0;1;0" dur="3.2s" begin={`${delay}s`} repeatCount="indefinite" />
+    </path>
+  );
+}
+
+/* The two 2x2 lakes sit on the same display squares for both seats (cols 2-3 and 6-7, rows 4-5).
+   Drawn in a 1000-unit viewBox scaled by 100, and animated with SMIL rather than CSS: Chrome
+   rasterises CSS-animated SVG on the tilted board at viewBox size, which came out blurry. */
+function Lakes() {
+  const inner = 'translate(1 1) scale(0.84) translate(-1 -1)';
+  return (
     <svg className="lakes" viewBox="0 0 1000 1000" aria-hidden="true">
       <defs>
-        <linearGradient id="lake-water" x1="0" y1="0" x2="0.4" y2="1">
-          <stop offset="0" className="lw-a" />
-          <stop offset="1" className="lw-b" />
-        </linearGradient>
-        <radialGradient id="lake-glow" cx="0.35" cy="0.3" r="0.7">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.35" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        <radialGradient id="lake-depth" cx="0.45" cy="0.42" r="0.62">
+          <stop offset="0" className="lw-b" />
+          <stop offset="0.75" className="lw-a" />
+          <stop offset="1" className="lw-edge" />
         </radialGradient>
-        {[2, 6].map((x) => (
-          <clipPath key={x} id={`lake-clip-${x}`}>
-            <rect x={x + 0.06} y={4.06} width={1.88} height={1.88} rx={0.42} />
-          </clipPath>
-        ))}
+        <linearGradient id="lake-shore" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" className="ls-a" />
+          <stop offset="1" className="ls-b" />
+        </linearGradient>
+        <clipPath id="lake-water-clip"><path d={SHORE} transform={inner} /></clipPath>
       </defs>
       <g transform="scale(100)">
-      {[2, 6].map((x) => (
-        <g key={x} className="lake">
-          <rect className="lake-rim" x={x + 0.02} y={4.02} width={1.96} height={1.96} rx={0.46} />
-          <g clipPath={`url(#lake-clip-${x})`}>
-            <rect x={x} y={4} width={2} height={2} fill="url(#lake-water)" />
-            <g className="waves">
-              {[4.45, 4.95, 5.45].map((y, i) => (
-                <path key={y} className="wave"
-                  d={`M${x - 1} ${y} q0.25 -0.12 0.5 0 t0.5 0 t0.5 0 t0.5 0 t0.5 0 t0.5 0 t0.5 0 t0.5 0`}>
-                  {/* SMIL, not CSS: a CSS-animated transform made Chrome rasterise the tilted board's SVG blurry */}
-                  <animateTransform attributeName="transform" type="translate" from="0 0" to="1 0"
-                    dur="4s" begin={`${-i * 1.3}s`} repeatCount="indefinite" />
-                </path>
+        {[2, 6].map((x) => (
+          <g key={x} className="lake" transform={x === 2 ? `translate(${x} 4)` : `translate(${x + 2} 4) scale(-1 1)`}>
+            <path className="shore" d={SHORE} />
+            <path className="water" d={SHORE} transform={inner} />
+            <g clipPath="url(#lake-water-clip)">
+              {/* drifting caustic light */}
+              <ellipse className="caustic" cx="0.7" cy="0.7" rx="0.42" ry="0.16">
+                <animate attributeName="cx" values="0.55;0.95;0.55" dur="9s" repeatCount="indefinite" />
+              </ellipse>
+              <ellipse className="caustic" cx="1.3" cy="1.3" rx="0.36" ry="0.12">
+                <animate attributeName="cx" values="1.45;1.05;1.45" dur="11s" repeatCount="indefinite" />
+              </ellipse>
+              {/* slow ripple rings */}
+              {[0, 3].map((d) => (
+                <circle key={d} className="ripple" cx="1.25" cy="1.15" r="0.05">
+                  <animate attributeName="r" values="0.05;0.55" dur="6s" begin={`${d}s`} repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.7;0" dur="6s" begin={`${d}s`} repeatCount="indefinite" />
+                </circle>
               ))}
             </g>
-            <rect x={x} y={4} width={2} height={2} fill="url(#lake-glow)" />
+            {/* foam line hugging the shore */}
+            <path className="foam" d={SHORE} transform="translate(1 1) scale(0.86) translate(-1 -1)">
+              <animate attributeName="stroke-dashoffset" values="0;0.74" dur="6s" repeatCount="indefinite" />
+            </path>
+            <Sparkle x={0.55} y={0.55} s={0.07} delay={0} />
+            <Sparkle x={1.45} y={0.6} s={0.05} delay={1.1} />
+            <Sparkle x={1.1} y={1.5} s={0.06} delay={2.2} />
+            <g className="rocks">
+              <ellipse cx="1.72" cy="1.62" rx="0.14" ry="0.1" />
+              <ellipse cx="1.56" cy="1.74" rx="0.08" ry="0.06" />
+            </g>
+            <g className="lily" transform="translate(0.55 1.4)">
+              <path className="pad" d="M0 0 L0.2 -0.05 A0.21 0.21 0 1 1 0.16 -0.15 Z" />
+              <circle className="bloom" cx="-0.04" cy="0.02" r="0.065" />
+            </g>
           </g>
-          <g className="lily" transform={`translate(${x === 2 ? x + 1.45 : x + 0.5} ${x === 2 ? 5.45 : 4.55})`}>
-            <path d="M0 0 L0.26 -0.06 A0.27 0.27 0 1 1 0.2 -0.19 Z" className="pad" />
-            <circle cx="-0.05" cy="0.02" r="0.08" className="bloom" />
-          </g>
-        </g>
-      ))}
+        ))}
       </g>
     </svg>
   );

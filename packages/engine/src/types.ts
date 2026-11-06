@@ -43,8 +43,15 @@ export type GameStatus =
   | { kind: 'won'; winner: Player; reason: 'flag' | 'no-moves' | 'resign' }
   | { kind: 'draw'; reason: 'no-moves' };
 
+/** Optional house rules the host picks before the game. */
+export interface GameRules {
+  /** The 4 may also step one square diagonally. */
+  diagonal4?: boolean;
+}
+
 export interface GameState {
   board: Board;
+  rules: GameRules;
   turn: Player;
   status: GameStatus;
   history: MoveEvent[];
@@ -72,6 +79,7 @@ export interface PublicPiece {
 
 export interface PlayerView {
   me: Player;
+  rules: GameRules;
   board: (PublicPiece | null)[][];
   turn: Player;
   status: GameStatus;

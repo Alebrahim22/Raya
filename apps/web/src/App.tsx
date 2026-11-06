@@ -6,6 +6,7 @@ import { GameScreen } from './screens/GameScreen';
 import { Rules } from './screens/Rules';
 import { Online } from './screens/Online';
 import { load, save } from './storage';
+import { useHouseRules } from './houseRules';
 
 export type Skin = 'war' | 'clay';
 type Screen =
@@ -21,6 +22,7 @@ function initialScreen(): Screen {
 
 export function App() {
   const [skin, setSkin] = useState<Skin>(() => load<Skin>('raya.skin', 'war'));
+  const [rules, setRules] = useHouseRules();
   const [level, setLevel] = useState<BotLevel>(() => load<BotLevel>('raya.level', 'medium'));
   const [screen, setScreen] = useState<Screen>(initialScreen);
 
@@ -41,10 +43,11 @@ export function App() {
           onRules={() => setScreen({ name: 'rules' })} />
       )}
       {screen.name === 'setup' && (
-        <SetupScreen onBack={() => setScreen({ name: 'home' })} onReady={(setup) => setScreen({ name: 'game', setup })} />
+        <SetupScreen onBack={() => setScreen({ name: 'home' })} onReady={(setup) => setScreen({ name: 'game', setup })}
+          rules={rules} onRules={setRules} />
       )}
       {screen.name === 'game' && (
-        <GameScreen key={JSON.stringify(screen.setup)} setup={screen.setup} level={level}
+        <GameScreen key={JSON.stringify(screen.setup)} setup={screen.setup} level={level} rules={rules}
           onExit={() => setScreen({ name: 'home' })} onRematch={() => setScreen({ name: 'setup' })} />
       )}
       {screen.name === 'rules' && <Rules onBack={() => setScreen({ name: 'home' })} />}

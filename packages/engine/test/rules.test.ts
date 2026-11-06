@@ -13,11 +13,11 @@ const SETUP: Setup = [
 ];
 
 /** A hand-built position: everything else empty. Each player keeps a flag far away. */
-function position(pieces: Array<[number, number, Player, Rank]>, turn: Player = 0): GameState {
+function position(pieces: Array<[number, number, Player, Rank]>, turn: Player = 0, rules: GameState['rules'] = {}): GameState {
   const board: Board = Array.from({ length: 10 }, () => Array<Piece | null>(10).fill(null));
   let n = 0;
   for (const [r, c, owner, rank] of pieces) board[r][c] = { id: `t${n++}`, owner, rank, revealed: false };
-  return { board, turn, status: { kind: 'playing' }, history: [], streak: [null, null] };
+  return { board, rules, turn, status: { kind: 'playing' }, history: [], streak: [null, null] };
 }
 
 describe('setup', () => {
@@ -83,6 +83,26 @@ describe('movement', () => {
     const g = position([[5, 1, 0, 6], [9, 9, 0, 'F'], [0, 9, 1, 'F'], [0, 0, 1, 4]]);
     const dests = legalMovesFrom(g, { r: 5, c: 1 }).map((m) => `${m.to.r},${m.to.c}`).sort();
     expect(dests).toEqual(['4,1', '5,0', '6,1']); // 5,2 is a lake
+  });
+
+  it('the 4 moves diagonally only when the house rule is on, and can strike that way', () => {
+    const pieces: Array<[number, number, Player, Rank]> = [[7, 5, 0, 4], [6, 6, 1, 3], [8, 4, 0, 6], [9, 9, 0, 'F'], [0, 9, 1, 'F']];
+    const dests = (g: GameState) => legalMovesFrom(g, { r: 7, c: 5 }).map((m) => `${m.to.r},${m.to.c}`).sort();
+    expect(dests(position(pieces))).toEqual(['6,5', '7,4', '7,6', '8,5']);
+    // diagonals: 6,4 empty, 6,6 enemy (attack), 8,6 empty, 8,4 own piece (blocked)
+    expect(dests(position(pieces, 0, { diagonal4: true }))).toEqual(['6,4', '6,5', '6,6', '7,4', '7,6', '8,5', '8,6']);
+    // other ranks never gain diagonals
+    expect(legalMovesFrom(position(pieces, 0, { diagonal4: true }), { r: 8, c: 4 }).every((m) => m.to.r === 8 || m.to.c === 4)).toBe(true);
+    // diagonal steps never land in a lake
+    const nearLake = position([[6, 1, 0, 4], [9, 9, 0, 'F'], [0, 9, 1, 'F']], 0, { diagonal4: true });
+    expect(legalMovesFrom(nearLake, { r: 6, c: 1 }).some((m) => m.to.r === 5 && m.to.c === 2)).toBe(false);
+  });
+
+  it('createGame and views carry the house rules', () => {
+    const g = createGame(SETUP, SETUP, 0, { diagonal4: true });
+    expect(g.rules.diagonal4).toBe(true);
+    expect(viewFor(g, 1).rules.diagonal4).toBe(true);
+    expect(applyMove(g, legalMoves(g)[0]).state.rules.diagonal4).toBe(true);
   });
 
   it('the scout runs any distance and can attack at the end of the run', () => {

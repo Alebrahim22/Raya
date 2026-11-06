@@ -1,5 +1,5 @@
 import type {
-  BattleOutcome, Board, GameState, Move, MoveEvent, Piece, Player, PlayerView, Pos, Rank, Setup, Streak,
+  BattleOutcome, Board, GameRules, GameState, Move, MoveEvent, Piece, Player, PlayerView, Pos, Rank, Setup, Streak,
 } from './types';
 
 export const SIZE = 10;
@@ -55,7 +55,7 @@ function placeSetup(board: Board, player: Player, setup: Setup): void {
   });
 }
 
-export function createGame(setup0: Setup, setup1: Setup, first: Player = 0): GameState {
+export function createGame(setup0: Setup, setup1: Setup, first: Player = 0, rules: GameRules = {}): GameState {
   for (const s of [setup0, setup1]) {
     const err = validateSetup(s);
     if (err) throw new Error(`invalid setup: ${err}`);
@@ -63,17 +63,18 @@ export function createGame(setup0: Setup, setup1: Setup, first: Player = 0): Gam
   const board: Board = Array.from({ length: SIZE }, () => Array<Piece | null>(SIZE).fill(null));
   placeSetup(board, 0, setup0);
   placeSetup(board, 1, setup1);
-  return { board, turn: first, status: { kind: 'playing' }, history: [], streak: [null, null] };
+  return { board, rules: { ...rules }, turn: first, status: { kind: 'playing' }, history: [], streak: [null, null] };
 }
 
 const DIRS: Pos[] = [{ r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }];
+const DIAGONALS: Pos[] = [{ r: -1, c: -1 }, { r: -1, c: 1 }, { r: 1, c: -1 }, { r: 1, c: 1 }];
 
 function samePos(a: Pos, b: Pos): boolean {
   return a.r === b.r && a.c === b.c;
 }
 
 /** Pseudo-legal moves for the piece at `from`, ignoring the two-square rule. */
-function rawMovesFrom(board: Board, from: Pos): Move[] {
+function rawMovesFrom(board: Board, from: Pos, rules: GameRules = {}): Move[] {
   const piece = board[from.r][from.c];
   if (!piece || !isMovable(piece.rank)) return [];
   const out: Move[] = [];
@@ -87,6 +88,17 @@ function rawMovesFrom(board: Board, from: Pos): Move[] {
       if (target && target.owner === piece.owner) break;
       out.push({ from, to: { r, c } });
       if (target) break; // attack stops the run
+    }
+  }
+  if (piece.rank === 4 && rules.diagonal4) {
+    // house rule: the 4 may also step (or strike) one square diagonally
+    for (const d of DIAGONALS) {
+      const r = from.r + d.r;
+      const c = from.c + d.c;
+      if (!inBounds(r, c) || isLake(r, c)) continue;
+      const target = board[r][c];
+      if (target && target.owner === piece.owner) continue;
+      out.push({ from, to: { r, c } });
     }
   }
   return out;
@@ -107,7 +119,7 @@ export function legalMoves(state: GameState, player: Player = state.turn): Move[
     for (let c = 0; c < SIZE; c++) {
       const p = state.board[r][c];
       if (!p || p.owner !== player) continue;
-      for (const m of rawMovesFrom(state.board, { r, c })) {
+      for (const m of rawMovesFrom(state.board, { r, c }, state.rules)) {
         if (!breaksTwoSquare(state.streak[player], p.id, m)) out.push(m);
       }
     }
@@ -170,6 +182,7 @@ export function applyMove(state: GameState, move: Move): { state: GameState; eve
 
   const next: GameState = {
     board,
+    rules: state.rules,
     turn: (1 - player) as Player,
     status: { kind: 'playing' },
     history: [...state.history, event],
@@ -198,6 +211,7 @@ export function viewFor(state: GameState, me: Player): PlayerView {
   const over = state.status.kind !== 'playing';
   return {
     me,
+    rules: state.rules,
     turn: state.turn,
     status: state.status,
     history: state.history,

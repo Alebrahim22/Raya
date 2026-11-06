@@ -6,7 +6,8 @@ import { ICONS, Icon, PIECE_NAME } from '../pieces';
 import { load, save } from '../storage';
 import { useOnline } from '../net';
 import { SetupScreen } from './SetupScreen';
-import { ArmyTray, ClashCard } from './GameScreen';
+import { HouseRules, useHouseRules } from '../houseRules';
+import { ArmyStrip, ClashCard } from './GameScreen';
 
 interface Props {
   mode: 'friend' | 'quick';
@@ -17,6 +18,7 @@ interface Props {
 export function Online({ mode, joinCode, onExit }: Props) {
   const net = useOnline();
   const [name, setName] = useState(() => load<string>('raya.name', ''));
+  const [hostRules, setHostRules] = useHouseRules();
   const [code, setCode] = useState(joinCode ?? '');
   const [sentSetup, setSentSetup] = useState(false);
   const room = net.room;
@@ -52,7 +54,8 @@ export function Online({ mode, joinCode, onExit }: Props) {
 
         {mode === 'friend' ? (
           <>
-            <button type="button" className="btn primary" onClick={() => net.send({ t: 'create', name: myName })}>سوّ غرفة جديدة</button>
+            <HouseRules rules={hostRules} onChange={setHostRules} />
+            <button type="button" className="btn primary" onClick={() => net.send({ t: 'create', name: myName, rules: hostRules })}>سوّ غرفة جديدة</button>
             <div className="section-label">أو ادخل كود غرفة صديقك</div>
             <div className="row">
               <input id="room-code" className="code-input" value={code} maxLength={5} placeholder="ABCDE" dir="ltr"
@@ -104,7 +107,7 @@ export function Online({ mode, joinCode, onExit }: Props) {
   if (room.phase === 'setup') {
     if (!sentSetup) {
       return (
-        <SetupScreen onBack={exit} subtitle={oppName ? `ضد ${oppName}` : undefined}
+        <SetupScreen onBack={exit} subtitle={oppName ? `ضد ${oppName}` : undefined} rules={room.rules ?? {}}
           onReady={(setup: Setup) => { net.send({ t: 'setup', setup }); setSentSetup(true); }} />
       );
     }
@@ -160,26 +163,31 @@ function OnlineGame({ net, onExit }: { net: ReturnType<typeof useOnline>; onExit
 
   return (
     <main className="screen">
-      <div className={`card bar enemy row ${view.turn === opp && !over ? 'active' : ''}`}>
-        <div className="avatar">{(room.names[opp] ?? '؟').slice(0, 1)}</div>
-        <div className="who">
-          <b>{room.names[opp] ?? 'الخصم'}</b>
-          <span>{room.connected[opp] ? `${count(opp)} قطعة باقية` : 'انقطع اتصاله… ننتظره يرجع'}</span>
+      <div className={`card bar enemy ${view.turn === opp && !over ? 'active' : ''}`}>
+        <div className="row">
+          <div className="avatar">{(room.names[opp] ?? '؟').slice(0, 1)}</div>
+          <div className="who">
+            <b>{room.names[opp] ?? 'الخصم'}</b>
+            <span>{room.connected[opp] ? `${count(opp)} قطعة باقية` : 'انقطع اتصاله… ننتظره يرجع'}</span>
+          </div>
+          {view.turn === opp && !over && <span className="muted" style={{ fontSize: 13 }}>يفكّر…</span>}
         </div>
-        {view.turn === opp && !over && <span className="muted" style={{ fontSize: 13 }}>يفكّر…</span>}
+        <ArmyStrip view={view} owner={opp} me={seat} />
       </div>
 
       <Board board={view.board} me={seat} selected={selected} hints={hints} last={view.history.at(-1)?.move ?? null} lastBy={view.history.at(-1)?.player} seq={view.history.length} onCell={tap} />
       <ClashCard event={net.event} me={seat} />
-      <ArmyTray view={view} me={seat} />
 
-      <div className={`card bar me row ${myTurn ? 'active' : ''}`} style={{ marginTop: 'auto' }}>
-        <div className="avatar">أنا</div>
-        <div className="who">
-          <b>{over ? 'انتهت المباراة' : myTurn ? 'دورك' : 'دور الخصم'}</b>
-          <span>{selected ? `اخترت ${PIECE_NAME[String(view.board[selected.r][selected.c]?.rank)]}` : `${count(seat)} قطعة باقية`}</span>
+      <div className={`card bar me ${myTurn ? 'active' : ''}`} style={{ marginTop: 'auto' }}>
+        <ArmyStrip view={view} owner={seat} me={seat} />
+        <div className="row">
+          <div className="avatar">أنا</div>
+          <div className="who">
+            <b>{over ? 'انتهت المباراة' : myTurn ? 'دورك' : 'دور الخصم'}</b>
+            <span>{selected ? `اخترت ${PIECE_NAME[String(view.board[selected.r][selected.c]?.rank)]}` : `${count(seat)} قطعة باقية`}</span>
+          </div>
+          {net.status !== 'open' ? <span className="pill">يعيد الاتصال…</span> : myTurn && <span className="pill">حرّك</span>}
         </div>
-        {net.status !== 'open' ? <span className="pill">يعيد الاتصال…</span> : myTurn && <span className="pill">حرّك</span>}
       </div>
       <div className="grid2">
         <button type="button" className="btn" onClick={onExit}>خروج</button>

@@ -23,6 +23,17 @@ function startGame() {
 }
 
 describe('rooms', () => {
+  it('applies the creator house rules to the game and ignores unknown flags', () => {
+    const lobby = new Lobby();
+    const a = new Stub(), b = new Stub();
+    lobby.handle(a, { t: 'create', name: 'محمد', rules: { diagonal4: true, evil: 1 } as never });
+    lobby.handle(b, { t: 'join', code: a.last('joined')!.code, name: 'فهد' });
+    expect(b.last('room')!.room.rules).toEqual({ diagonal4: true });
+    lobby.handle(a, { t: 'setup', setup: randomSetup() });
+    lobby.handle(b, { t: 'setup', setup: randomSetup() });
+    expect(a.last('state')!.view.rules).toEqual({ diagonal4: true });
+  });
+
   it('creates a room, lets a friend join by code, and starts after both setups', () => {
     const { a, b } = startGame();
     expect(a.last('room')!.room.phase).toBe('playing');

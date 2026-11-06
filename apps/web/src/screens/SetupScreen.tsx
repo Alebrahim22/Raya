@@ -1,18 +1,22 @@
 import { useMemo, useState } from 'react';
 import { SIZE, randomSetup, validateSetup } from '@raya/engine';
-import type { PublicPiece, Pos, Setup } from '@raya/engine';
+import type { GameRules, PublicPiece, Pos, Setup } from '@raya/engine';
 import { Board } from '../Board';
 import { ICONS, Icon, PIECE_NAME } from '../pieces';
 import { load, save } from '../storage';
 import { usePieceStyle } from '../pieceStyle';
+import { HouseRules } from '../houseRules';
 
 interface Props {
   onBack: () => void;
   onReady: (s: Setup) => void;
   subtitle?: string;
+  /** house rules; with onRules the player is the host and can change them */
+  rules?: GameRules;
+  onRules?: (r: GameRules) => void;
 }
 
-export function SetupScreen({ onBack, onReady, subtitle }: Props) {
+export function SetupScreen({ onBack, onReady, subtitle, rules = {}, onRules }: Props) {
   const [setup, setSetup] = useState<Setup>(() => {
     const saved = load<Setup | null>('raya.lastSetup', null);
     return saved && !validateSetup(saved) ? saved : randomSetup();
@@ -60,6 +64,8 @@ export function SetupScreen({ onBack, onReady, subtitle }: Props) {
         <button type="button" className="btn" aria-pressed={pieceStyle === 'icons'} onClick={() => setPieceStyle('icons')}>رموز</button>
         <button type="button" className="btn" aria-pressed={pieceStyle === 'numbers'} onClick={() => setPieceStyle('numbers')}>أرقام كبيرة</button>
       </div>
+
+      <HouseRules rules={rules} onChange={onRules} />
 
       <div className="grid2">
         <button type="button" className="btn" onClick={() => { setSetup(randomSetup()); setPicked(null); }}>
