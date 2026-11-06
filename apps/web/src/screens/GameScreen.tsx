@@ -82,7 +82,7 @@ export function GameScreen({ setup, level, onExit, onRematch }: Props) {
         {state.turn === BOT && !over && <span className="muted" style={{ fontSize: 13 }}>يفكّر…</span>}
       </div>
 
-      <Board board={view.board} me={HUMAN} selected={selected} hints={hints} last={last} onCell={tap} />
+      <Board board={view.board} me={HUMAN} selected={selected} hints={hints} last={last} lastBy={view.history.at(-1)?.player} seq={view.history.length} onCell={tap} />
 
       <ClashCard event={clash} me={HUMAN} />
 

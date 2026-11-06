@@ -169,7 +169,7 @@ function OnlineGame({ net, onExit }: { net: ReturnType<typeof useOnline>; onExit
         {view.turn === opp && !over && <span className="muted" style={{ fontSize: 13 }}>يفكّر…</span>}
       </div>
 
-      <Board board={view.board} me={seat} selected={selected} hints={hints} last={net.event?.move ?? null} onCell={tap} />
+      <Board board={view.board} me={seat} selected={selected} hints={hints} last={view.history.at(-1)?.move ?? null} lastBy={view.history.at(-1)?.player} seq={view.history.length} onCell={tap} />
       <ClashCard event={net.event} me={seat} />
       <EnemyTray left={remaining(view, opp)} me={seat} />
 

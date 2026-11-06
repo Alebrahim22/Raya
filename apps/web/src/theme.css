@@ -24,6 +24,8 @@
   --known: linear-gradient(165deg, #FF7A9A, #E11D48 45%, #9F1239);
   --known-edge: #5F0A24;
   --known-ring: #FFE08A;
+  --foe: #3EE6FF;
+  --foe-soft: rgba(62, 230, 255, 0.22);
   --tile-a: #2A2550;
   --tile-b: #242046;
   --lake: linear-gradient(160deg, #1F3D7A, #142A58);
@@ -66,6 +68,8 @@
   --known: #E11D48;
   --known-edge: #9F1239;
   --known-ring: #FFFFFF;
+  --foe: #7C3AED;
+  --foe-soft: rgba(124, 58, 237, 0.22);
   --tile-a: #F6F9FE;
   --tile-b: #EEF3FB;
   --lake: #7FD3EE;
@@ -216,6 +220,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-
   box-shadow: var(--surface-shadow), 0 30px 50px rgba(0, 0, 0, 0.35);
   transform: rotateX(var(--tilt));
   transform-origin: 50% 100%;
+  position: relative;
 }
 .cell {
   aspect-ratio: 1 / 1;
@@ -237,6 +242,36 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-
 }
 .cell.dim { opacity: 0.35; }
 .cell.last { box-shadow: inset 0 0 0 1.5px var(--muted); }
+
+/* enemy's last move: origin square, landing square and an animated arrow */
+.cell.foe-from { background: var(--foe-soft); box-shadow: inset 0 0 0 2px var(--foe); }
+.cell.foe-from::before {
+  content: ''; position: absolute; inset: 3px; border-radius: inherit;
+  border: 2px dashed var(--foe); opacity: 0.7;
+}
+.cell.foe-to { box-shadow: inset 0 0 0 2px var(--foe), 0 0 14px var(--foe); animation: foe-pulse 1.4s ease-out 0.45s 2; z-index: 1; }
+@keyframes foe-pulse {
+  0% { box-shadow: inset 0 0 0 2px var(--foe), 0 0 0 0 var(--foe); }
+  100% { box-shadow: inset 0 0 0 2px var(--foe), 0 0 0 9px transparent; }
+}
+.foe-arrow {
+  position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px);
+  pointer-events: none; overflow: visible; z-index: 2;
+  filter: drop-shadow(0 0 3px var(--foe)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+}
+.foe-line {
+  stroke: var(--foe); stroke-width: 0.14; stroke-linecap: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1; animation: foe-draw 0.45s ease-out forwards;
+}
+.foe-dot { fill: var(--foe); }
+.foe-head { fill: var(--foe); opacity: 0; animation: foe-head 0.2s ease-out 0.4s forwards; }
+@keyframes foe-draw { to { stroke-dashoffset: 0; } }
+@keyframes foe-head { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .foe-line { animation: none; stroke-dashoffset: 0; }
+  .foe-head { animation: none; opacity: 1; }
+  .cell.foe-to { animation: none; }
+}
 
 .tok {
   width: 100%;
