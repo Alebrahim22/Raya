@@ -70,7 +70,6 @@ export function GameScreen({ setup, level, onExit, onRematch }: Props) {
     }
   }
 
-  const enemyLeft = remaining(view, BOT);
   const status = state.status;
   const won = status.kind === 'won' && status.winner === HUMAN;
 
@@ -86,7 +85,7 @@ export function GameScreen({ setup, level, onExit, onRematch }: Props) {
 
       <ClashCard event={clash} me={HUMAN} />
 
-      <EnemyTray left={enemyLeft} me={HUMAN} />
+      <ArmyTray view={view} me={HUMAN} />
 
       <div className={`card bar me row ${state.turn === HUMAN && !over ? 'active' : ''}`} style={{ marginTop: 'auto' }}>
         <div className="avatar">أنا</div>
@@ -133,19 +132,33 @@ export function GameScreen({ setup, level, onExit, onRematch }: Props) {
   );
 }
 
-export function EnemyTray({ left, me }: { left: Map<Rank, number>; me: 0 | 1 }) {
+/** Remaining army for both sides: enemy row on top, mine below. */
+export function ArmyTray({ view, me }: { view: ReturnType<typeof viewFor>; me: 0 | 1 }) {
   const enemy = (1 - me) as 0 | 1;
+  const row = (owner: 0 | 1, label: string) => {
+    const left = remaining(view, owner);
+    const total = [...left.values()].reduce((a, b) => a + b, 0);
+    return (
+      <div className={`tray-row ${owner === me ? 'mine' : 'theirs'}`} aria-label={`المتبقي ${label}`}>
+        <div className="tray-label"><b>{label}</b><span>{total}</span></div>
+        <div className="tray-items">
+          {ARMY.map(([rank]) => {
+            const n = left.get(rank) ?? 0;
+            const p: PublicPiece = { id: String(rank), owner, rank, revealed: true };
+            return (
+              <div key={String(rank)} className={`item ${n ? '' : 'gone'}`} title={`${PIECE_NAME[String(rank)]}: ${n}`}>
+                <Token piece={p} me={me} /><b className="count">{n}</b>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
   return (
-    <div className="card tray" aria-label="المتبقي عند الخصم">
-      {ARMY.map(([rank]) => {
-        const n = left.get(rank) ?? 0;
-        const p: PublicPiece = { id: String(rank), owner: enemy, rank, revealed: true };
-        return (
-          <div key={String(rank)} className={`item ${n ? '' : 'gone'}`} title={PIECE_NAME[String(rank)]}>
-            <Token piece={p} me={me} /><b>{n}</b>
-          </div>
-        );
-      })}
+    <div className="card tray">
+      {row(enemy, 'الخصم')}
+      {row(me, 'أنا')}
     </div>
   );
 }

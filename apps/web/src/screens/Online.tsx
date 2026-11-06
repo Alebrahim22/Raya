@@ -6,7 +6,7 @@ import { ICONS, Icon, PIECE_NAME } from '../pieces';
 import { load, save } from '../storage';
 import { useOnline } from '../net';
 import { SetupScreen } from './SetupScreen';
-import { ClashCard, EnemyTray, remaining } from './GameScreen';
+import { ArmyTray, ClashCard } from './GameScreen';
 
 interface Props {
   mode: 'friend' | 'quick';
@@ -171,7 +171,7 @@ function OnlineGame({ net, onExit }: { net: ReturnType<typeof useOnline>; onExit
 
       <Board board={view.board} me={seat} selected={selected} hints={hints} last={view.history.at(-1)?.move ?? null} lastBy={view.history.at(-1)?.player} seq={view.history.length} onCell={tap} />
       <ClashCard event={net.event} me={seat} />
-      <EnemyTray left={remaining(view, opp)} me={seat} />
+      <ArmyTray view={view} me={seat} />
 
       <div className={`card bar me row ${myTurn ? 'active' : ''}`} style={{ marginTop: 'auto' }}>
         <div className="avatar">أنا</div>
