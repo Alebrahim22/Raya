@@ -17,8 +17,9 @@ const eq = (a: Pos | null | undefined, r: number, c: number) => !!a && a.r === r
 export function Token({ piece, me, className = '' }: { piece: PublicPiece; me: 0 | 1; className?: string }) {
   const mine = piece.owner === me;
   const hidden = piece.rank === null;
+  const numbered = typeof piece.rank === 'number';
   return (
-    <span className={`tok ${mine ? 'me' : 'en'} ${hidden ? 'hidden' : ''} ${className}`}>
+    <span className={`tok ${mine ? 'me' : 'en'} ${hidden ? 'hidden' : ''} ${numbered ? 'has-num' : ''} ${className}`}>
       <Emblem rank={piece.rank} size={hidden ? 13 : 17} />
       {typeof piece.rank === 'number' && <span className="num">{piece.rank}</span>}
     </span>
@@ -39,11 +40,12 @@ export function Board({ board, me, selected, hints = [], last, dimRows, onCell }
             const hint = hintAt(r, c);
             const cls = ['cell', (r + c) % 2 ? 'alt' : '', lake ? 'lake' : '', hint && !p ? 'hint' : '',
               dimRows?.(r) ? 'dim' : '', last && (eq(last.from, r, c) || eq(last.to, r, c)) ? 'last' : ''].join(' ');
-            const label = lake ? 'بحيرة' : p ? (p.rank === null ? 'قطعة خصم مخفية' : `${p.owner === me ? '' : 'خصم: '}${PIECE_NAME[String(p.rank)]}`) : 'مربع فاضي';
+            const label = lake ? 'بحيرة' : p ? (p.rank === null ? 'قطعة خصم مخفية' : `${p.owner === me ? '' : 'خصم مكشوف: '}${PIECE_NAME[String(p.rank)]}`) : 'مربع فاضي';
             return (
               <button key={`${r}-${c}`} type="button" className={cls} aria-label={label} disabled={lake}
                 onClick={() => onCell?.({ r, c })}>
-                {p && <Token piece={p} me={me} className={`${eq(selected, r, c) ? 'selected' : ''} ${hint ? 'target' : ''}`} />}
+                {p && <Token piece={p} me={me}
+                  className={`${eq(selected, r, c) ? 'selected' : ''} ${hint ? 'target' : ''} ${p.owner !== me && p.rank !== null ? 'known' : ''}`} />}
               </button>
             );
           }),

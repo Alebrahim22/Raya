@@ -4,6 +4,7 @@ import type { PublicPiece, Pos, Setup } from '@raya/engine';
 import { Board } from '../Board';
 import { ICONS, Icon, PIECE_NAME } from '../pieces';
 import { load, save } from '../storage';
+import { usePieceStyle } from '../pieceStyle';
 
 interface Props {
   onBack: () => void;
@@ -17,6 +18,7 @@ export function SetupScreen({ onBack, onReady, subtitle }: Props) {
     return saved && !validateSetup(saved) ? saved : randomSetup();
   });
   const [picked, setPicked] = useState<Pos | null>(null);
+  const [pieceStyle, setPieceStyle] = usePieceStyle();
 
   const board = useMemo(() => {
     const b: (PublicPiece | null)[][] = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
@@ -52,6 +54,12 @@ export function SetupScreen({ onBack, onReady, subtitle }: Props) {
       </div>
 
       <Board board={board} me={0} selected={picked} dimRows={(r) => r < 6} onCell={tap} />
+
+      <div className="style-pick" role="group" aria-label="شكل القطع">
+        <span className="muted">شكل القطع</span>
+        <button type="button" className="btn" aria-pressed={pieceStyle === 'icons'} onClick={() => setPieceStyle('icons')}>رموز</button>
+        <button type="button" className="btn" aria-pressed={pieceStyle === 'numbers'} onClick={() => setPieceStyle('numbers')}>أرقام كبيرة</button>
+      </div>
 
       <div className="grid2">
         <button type="button" className="btn" onClick={() => { setSetup(randomSetup()); setPicked(null); }}>
